@@ -52,14 +52,9 @@ jobs:
 
     - name: Terraform Init
       run: |
-        echo 'region = "${{ secrets.AWS_REGION }}"' >> config.aws.backend
-        echo 'access_key = "${{ secrets.AWS_ACCESS_KEY_ID }}"' >> config.aws.backend
-        echo 'secret_key = "${{ secrets.AWS_SECRET_ACCESS_KEY }}"' >> config.aws.backend
-        echo 'bucket = "${{ secrets.AWS_BUCKET }}"' >> config.aws.backend
-        echo 'key = "${{ secrets.AWS_STATE_PATH }}"' >> config.aws.backend
-        echo 'encrypt = ${{ secrets.AWS_ENCRYPT }}' >> config.aws.backend
-        echo 'dynamodb_table = "${{ secrets.AWS_DYNAMODB_TABLE }}"' >> config.aws.backend
-        TF_LOG=DEBUG terraform init -reconfigure -backend-config=config.aws.backend
+        echo 'bucket = "${{ secrets.GCS_BUCKET }}"' >> config.gcs.backend
+        echo 'credentials = "${{ secrets.GCS_CREDENTIALS }}"' >> config.gcs.backend
+        TF_LOG=DEBUG terraform init -reconfigure -backend-config=config.gcs.backend
 
     - name: Terraform Format
       run: terraform fmt -check
