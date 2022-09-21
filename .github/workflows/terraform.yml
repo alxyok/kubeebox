@@ -1,0 +1,77 @@
+name: 'Terraform'
+
+on:
+  push:
+    branches: 
+     - "dev-*"
+
+env:
+  TF_VAR_gcp_project: ${{ secrets.GCP_PROJECT }}
+  TF_VAR_gcp_credentials: ${{ secrets.GCP_CREDENTIALS }}
+  TF_VAR_gcp_region: ${{ secrets.GCP_REGION }}
+  TF_VAR_gcp_zone: ${{ secrets.GCP_ZONE }}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    environment: dev
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Configure Google Cloud SDK
+      id: 'auth'
+      uses: 'google-github-actions/auth@v0'
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS }}
+
+    - name: Setup Cloud SDK
+      uses: 'google-github-actions/setup-gcloud@v0'
+
+    - name: Activate CRM API
+      run: |
+        gcloud storage buckets create --location ${{ secrets.GCP_REGION }} \
+                                      --project ${{ secrets.GCP_PROJECT }} \
+                                      gs://${{ secrets.GCP_BUCKET }}-tfstate
+        gcloud services enable cloudresourcemanager.googleapis.com --project ${{ secrets.GCP_PROJECT }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.2.9
+
+    - name: Terraform Init
+      run: |
+        echo 'region = "${{ secrets.AWS_REGION }}"' >> config.aws.backend
+        echo 'access_key = "${{ secrets.AWS_ACCESS_KEY_ID }}"' >> config.aws.backend
+        echo 'secret_key = "${{ secrets.AWS_SECRET_ACCESS_KEY }}"' >> config.aws.backend
+        echo 'bucket = "${{ secrets.AWS_BUCKET }}"' >> config.aws.backend
+        echo 'key = "${{ secrets.AWS_STATE_PATH }}"' >> config.aws.backend
+        echo 'encrypt = ${{ secrets.AWS_ENCRYPT }}' >> config.aws.backend
+        echo 'dynamodb_table = "${{ secrets.AWS_DYNAMODB_TABLE }}"' >> config.aws.backend
+        TF_LOG=DEBUG terraform init -reconfigure -backend-config=config.aws.backend
+
+    - name: Terraform Format
+      run: terraform fmt -check
+
+    - name: Terraform Plan
+      run: terraform plan -input=false
+
+        # - name: Terraform output
+        # run: terraform output -json > outputs.json
+
+        # - name: Upload Terraform outputs
+        # uses: actions/upload-artifact@v3
+        # with:
+        # name: terraform-output
+        # path: outputs.json
