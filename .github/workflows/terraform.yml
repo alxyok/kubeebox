@@ -40,9 +40,6 @@ jobs:
 
     - name: Activate CRM API
       run: |
-        gcloud storage buckets create --location ${{ secrets.GCP_REGION }} \
-                                      --project ${{ secrets.GCP_PROJECT }} \
-                                      gs://${{ secrets.GCP_BUCKET }}-tfstate
         gcloud services enable cloudresourcemanager.googleapis.com --project ${{ secrets.GCP_PROJECT }}
 
     - name: Setup Terraform
@@ -52,10 +49,15 @@ jobs:
 
     - name: Terraform Init
       run: |
-        echo 'bucket = "${{ secrets.GCS_BUCKET }}"' >> config.gcs.backend
-        echo 'credentials = "${{ secrets.GCS_CREDENTIALS }}"' >> config.gcs.backend
-        TF_LOG=DEBUG terraform init -reconfigure -backend-config=config.gcs.backend
-
+        echo 'region = "${{ secrets.AWS_REGION }}"' >> config.aws.backend
+        echo 'access_key = "${{ secrets.AWS_ACCESS_KEY_ID }}"' >> config.aws.backend
+        echo 'secret_key = "${{ secrets.AWS_SECRET_ACCESS_KEY }}"' >> config.aws.backend
+        echo 'bucket = "${{ secrets.AWS_BUCKET }}"' >> config.aws.backend
+        echo 'key = "${{ secrets.AWS_STATE_PATH }}"' >> config.aws.backend
+        echo 'encrypt = ${{ secrets.AWS_ENCRYPT }}' >> config.aws.backend
+        echo 'dynamodb_table = "${{ secrets.AWS_DYNAMODB_TABLE }}"' >> config.aws.backend
+        terraform init -reconfigure -backend-config=config.aws.backend
+        
     - name: Terraform Format
       run: terraform fmt -check
 
